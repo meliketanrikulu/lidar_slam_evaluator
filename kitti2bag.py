@@ -42,7 +42,7 @@ import rosbag
 from std_msgs.msg import Header
 from sensor_msgs.msg import Imu, PointField, NavSatFix
 import sensor_msgs.point_cloud2 as pcl2
-from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import TwistStamped, TwistWithCovarianceStamped
 import numpy as np
 
 def save_imu_data(bag, kitti, imu_frame_id, topic):
@@ -207,21 +207,26 @@ def save_gps_fix_data(bag, kitti, gps_frame_id, topic):
         navsatfix_msg.latitude = oxts.packet.lat
         navsatfix_msg.longitude = oxts.packet.lon
         navsatfix_msg.altitude = oxts.packet.alt
+        navsatfix_msg.position_covariance[0] = oxts.packet.pos_accuracy * oxts.packet.pos_accuracy
+        navsatfix_msg.position_covariance[4] = oxts.packet.pos_accuracy * oxts.packet.pos_accuracy
+        navsatfix_msg.position_covariance[8] = 10.000
         navsatfix_msg.status.service = 1
         bag.write(topic, navsatfix_msg, t=navsatfix_msg.header.stamp)
 
 
 def save_gps_vel_data(bag, kitti, gps_frame_id, topic):
     for timestamp, oxts in zip(kitti.timestamps, kitti.oxts):
-        twist_msg = TwistStamped()
+        twist_msg = TwistWithCovarianceStamped()
         twist_msg.header.frame_id = gps_frame_id
         twist_msg.header.stamp = rospy.Time.from_sec(float(timestamp.strftime("%s.%f")))
-        twist_msg.twist.linear.x = oxts.packet.vf
-        twist_msg.twist.linear.y = oxts.packet.vl
-        twist_msg.twist.linear.z = oxts.packet.vu
-        twist_msg.twist.angular.x = oxts.packet.wf
-        twist_msg.twist.angular.y = oxts.packet.wl
-        twist_msg.twist.angular.z = oxts.packet.wu
+        twist_msg.twist.twist.linear.x = oxts.packet.vf
+        twist_msg.twist.twist.linear.y = oxts.packet.vl
+        twist_msg.twist.twist.linear.z = oxts.packet.vu
+        twist_msg.twist.twist.angular.x = oxts.packet.wf
+        twist_msg.twist.twist.angular.y = oxts.packet.wl
+        twist_msg.twist.twist.angular.z = oxts.packet.wu
+        twist_msg.twist.covariance[0] = oxts.packet.vel_accuracy * oxts.packet.vel_accuracy
+        twist_msg.twist.covariance[7] = oxts.packet.vel_accuracy * oxts.packet.vel_accuracy
         bag.write(topic, twist_msg, t=twist_msg.header.stamp)
 
 
